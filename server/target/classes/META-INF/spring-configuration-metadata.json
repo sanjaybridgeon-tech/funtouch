@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "funtouch.cors",
+      "type": "com.funtouch.config.FunTouchCorsProperties",
+      "sourceType": "com.funtouch.config.FunTouchCorsProperties"
+    },
+    {
+      "name": "livekit",
+      "type": "com.funtouch.config.LiveKitProperties",
+      "sourceType": "com.funtouch.config.LiveKitProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "funtouch.cors.allowed-origins",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.funtouch.config.FunTouchCorsProperties"
+    },
+    {
+      "name": "livekit.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.funtouch.config.LiveKitProperties"
+    },
+    {
+      "name": "livekit.api-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.funtouch.config.LiveKitProperties"
+    },
+    {
+      "name": "livekit.url",
+      "type": "java.lang.String",
+      "sourceType": "com.funtouch.config.LiveKitProperties"
+    }
+  ],
+  "hints": []
+}

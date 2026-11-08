@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: funtouch-server
+
+server:
+  port: 8080
+
+# LiveKit Cloud credentials — always set via environment variables, never hardcode
+livekit:
+  api-key: ${LIVEKIT_API_KEY:change-me-in-env}
+  api-secret: ${LIVEKIT_API_SECRET:change-me-in-env}
+  url: ${LIVEKIT_URL:wss://your-project.livekit.cloud}
+
+# Allowed frontend origins for CORS
+funtouch:
+  cors:
+    allowed-origins:
+      - http://localhost:*
+      - http://127.0.0.1:*
+      - http://localhost:5173
+      - http://localhost:5175
+      - http://localhost:3000
+      - ${FRONTEND_URL:https://funtouch.app}
+
+logging:
+  level:
+    com.funtouch: DEBUG
+    org.springframework.web: INFO
+    org.springframework.messaging: INFO
+

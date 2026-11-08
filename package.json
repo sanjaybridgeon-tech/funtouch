@@ -1,0 +1,13 @@
+{
+  "name": "funtouch-root",
+  "private": true,
+  "description": "FunTouch — Interactive Video Calls (Root Workspace)",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview",
+    "server": "cd server && mvn spring-boot:run",
+    "server:test": "cd server && mvn test"
+  }
+}
+

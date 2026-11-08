@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "FunTouch — Remote Control for Video Calls",
+  "version": "1.0.0",
+  "description": "Touch, click, scroll, and type on shared browser tabs in real time during FunTouch video calls.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "FunTouch Control Manager"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "optional_permissions": [
+    "debugger"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "http://localhost:5174/*",
+        "http://localhost:5175/*",
+        "http://localhost:5176/*",
+        "http://localhost:5177/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:5173/*",
+        "http://127.0.0.1:5175/*",
+        "http://127.0.0.1:5176/*",
+        "https://funtouch.app/*",
+        "https://*.funtouch.app/*"
+      ],
+      "js": ["host-bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "http://localhost:5174/*",
+      "http://localhost:5175/*",
+      "http://localhost:5176/*",
+      "http://localhost:5177/*",
+      "http://localhost:3000/*",
+      "http://127.0.0.1:5173/*",
+      "http://127.0.0.1:5175/*",
+      "http://127.0.0.1:5176/*",
+      "https://funtouch.app/*",
+      "https://*.funtouch.app/*"
+    ]
+  }
+}
