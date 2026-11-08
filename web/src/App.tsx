@@ -2,14 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  useLocalParticipant,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
 import { LandingPage } from './components/LandingPage';
 import { VideoStage } from './components/VideoStage';
 import { ControlBar } from './components/ControlBar';
 import { LobbyModal } from './components/LobbyModal';
-import { roomApi, getHostToken } from './api/roomApi';
+import { roomApi, getHostToken, getLiveKitToken } from './api/roomApi';
 import { RoomWebSocketClient } from './websocket/wsClient';
 import { RoomResponse, ControlState, WebSocketEvent } from './types';
 import { stopAllLocalMedia } from './utils/mediaManager';
@@ -25,6 +23,7 @@ export function App() {
   const [liveKitToken, setLiveKitToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialRoomId, setInitialRoomId] = useState<string>('');
 
   // Guest lobby state
   const [isWaitingApproval, setIsWaitingApproval] = useState(false);
@@ -39,10 +38,19 @@ export function App() {
   // Media state
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-  // WebSocket reference
+  // WebSocket reference & Fresh State Refs to eliminate closure stale state
   const wsClientRef = useRef<RoomWebSocketClient | null>(null);
+  const isHostRef = useRef(isHost);
+  isHostRef.current = isHost;
+
+  const currentRoomRef = useRef(currentRoom);
+  currentRoomRef.current = currentRoom;
+
+  const guestIdRef = useRef(guestId);
+  guestIdRef.current = guestId;
+
+  const onWebSocketEventRef = useRef<(event: WebSocketEvent) => void>(() => {});
 
   // Handle URL hash on load (e.g., #room=2eb8a8)
   useEffect(() => {
@@ -50,13 +58,17 @@ export function App() {
     const match = hash.match(/room=([a-zA-Z0-9]+)/);
     if (match && match[1]) {
       const targetRoomId = match[1];
+      setInitialRoomId(targetRoomId);
+
       roomApi.getRoom(targetRoomId)
         .then((room) => {
-          // Check if current user is the host
+          // Check if current user is the host and has saved session token
           const hostToken = getHostToken(targetRoomId);
-          if (hostToken) {
+          const savedLiveKitToken = getLiveKitToken(targetRoomId);
+          if (hostToken && savedLiveKitToken) {
             setIsHost(true);
             setCurrentRoom(room);
+            setLiveKitToken(savedLiveKitToken);
           }
         })
         .catch(() => {
@@ -65,7 +77,30 @@ export function App() {
     }
   }, []);
 
-  // Cleanup STOMP connection when leaving room
+  // Dedicated WebSocket lifecycle tied to current active room
+  useEffect(() => {
+    if (!currentRoom?.roomId) {
+      if (wsClientRef.current) {
+        wsClientRef.current.disconnect();
+        wsClientRef.current = null;
+      }
+      return;
+    }
+
+    console.log(`[FunTouch WebSocket] Connecting to room topic: /topic/room/${currentRoom.roomId}`);
+    const client = new RoomWebSocketClient(currentRoom.roomId, (event) => {
+      onWebSocketEventRef.current(event);
+    });
+    client.connect();
+    wsClientRef.current = client;
+
+    return () => {
+      client.disconnect();
+      wsClientRef.current = null;
+    };
+  }, [currentRoom?.roomId]);
+
+  // Window message listener for extension stop control
   useEffect(() => {
     const handleWindowMessage = (e: MessageEvent) => {
       if (e.data?.source === 'FUNTOUCH_EXTENSION_STOP_CONTROL') {
@@ -76,31 +111,34 @@ export function App() {
 
     return () => {
       window.removeEventListener('message', handleWindowMessage);
-      if (wsClientRef.current) {
-        wsClientRef.current.disconnect();
-      }
     };
   }, []);
 
-  // WebSocket event handler
-  const handleWebSocketEvent = (event: WebSocketEvent) => {
+  // WebSocket event handler (always reads latest state via refs)
+  onWebSocketEventRef.current = (event: WebSocketEvent) => {
     console.log('[Room Event Received]:', event);
 
     switch (event.eventType) {
-      case 'GUEST_JOINED':
-        if (isHost && event.participantId && event.participantName) {
+      case 'GUEST_JOINED': {
+        const isCurrentHost = isHostRef.current || (currentRoomRef.current && !!getHostToken(currentRoomRef.current.roomId));
+        if (isCurrentHost && event.participantId && event.participantName) {
+          console.log(`[FunTouch Lobby] Host received join request from: ${event.participantName} (${event.participantId})`);
           setPendingGuests((prev) => [
             ...prev.filter((g) => g.id !== event.participantId),
             { id: event.participantId!, name: event.participantName! },
           ]);
         }
         break;
+      }
 
       case 'GUEST_APPROVED':
         // If this guest was approved, take their token and enter the call
-        if (!isHost && event.guestToken) {
-          setLiveKitToken(event.guestToken);
-          setIsWaitingApproval(false);
+        if (!isHostRef.current && event.guestToken) {
+          if (!guestIdRef.current || !event.participantId || event.participantId === guestIdRef.current) {
+            console.log('[FunTouch Lobby] Guest approved! Entering video room...');
+            setLiveKitToken(event.guestToken);
+            setIsWaitingApproval(false);
+          }
         }
         // Remove from host's pending list
         if (event.participantId) {
@@ -109,10 +147,12 @@ export function App() {
         break;
 
       case 'GUEST_REJECTED':
-        if (!isHost) {
-          setIsWaitingApproval(false);
-          setError('The host declined your join request.');
-          setCurrentRoom(null);
+        if (!isHostRef.current) {
+          if (!guestIdRef.current || !event.participantId || event.participantId === guestIdRef.current) {
+            setIsWaitingApproval(false);
+            setError('The host declined your join request.');
+            setCurrentRoom(null);
+          }
         }
         if (event.participantId) {
           setPendingGuests((prev) => prev.filter((g) => g.id !== event.participantId));
@@ -140,13 +180,9 @@ export function App() {
     setError(null);
     try {
       const { room } = await roomApi.createRoom({ hostName, roomName });
-      setCurrentRoom(room);
       setIsHost(true);
+      setCurrentRoom(room);
       setLiveKitToken(room.token);
-
-      // Connect to WebSocket room topic
-      wsClientRef.current = new RoomWebSocketClient(room.roomId, handleWebSocketEvent);
-      wsClientRef.current.connect();
 
       window.location.hash = `room=${room.roomId}`;
     } catch (err: any) {
@@ -163,14 +199,10 @@ export function App() {
     try {
       // 1. Fetch room info
       const room = await roomApi.getRoom(roomId);
-      setCurrentRoom(room);
       setIsHost(false);
+      setCurrentRoom(room);
 
-      // 2. Connect to WebSocket room topic to await approval
-      wsClientRef.current = new RoomWebSocketClient(roomId, handleWebSocketEvent);
-      wsClientRef.current.connect();
-
-      // 3. Submit join request
+      // 2. Submit join request to backend (notifies host over WebSocket)
       const joinRes = await roomApi.joinRoom(roomId, { guestName });
       setGuestId(joinRes.guestId);
       setIsWaitingApproval(true);
@@ -262,13 +294,8 @@ export function App() {
     setIsWaitingApproval(false);
     setPendingGuests([]);
     setControlState('NONE');
+    setGuestId(null);
     window.location.hash = '';
-  };
-
-  // Send click events over LiveKit WebRTC Data Channel (Phase 3 foundation)
-  const handleScreenClick = (x: number, y: number) => {
-    console.log(`[FunTouch Click Sent] relativeX: ${x.toFixed(4)}, relativeY: ${y.toFixed(4)}`);
-    // When remote control is active, packets are transmitted via LiveKit data channel
   };
 
   // If not inside an active call, show Landing Page
@@ -280,6 +307,7 @@ export function App() {
           onJoinCall={handleJoinCall}
           loading={loading}
           error={error}
+          initialRoomId={initialRoomId}
         />
         <LobbyModal
           isHost={isHost}
@@ -362,4 +390,3 @@ export function App() {
     </LiveKitRoom>
   );
 }
-

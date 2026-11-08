@@ -42,7 +42,9 @@
         "http://127.0.0.1:5175/*",
         "http://127.0.0.1:5176/*",
         "https://funtouch.app/*",
-        "https://*.funtouch.app/*"
+        "https://*.funtouch.app/*",
+        "https://funtouch.vercel.app/*",
+        "https://*.vercel.app/*"
       ],
       "js": ["host-bridge.js"],
       "run_at": "document_start"
@@ -60,7 +62,9 @@
       "http://127.0.0.1:5175/*",
       "http://127.0.0.1:5176/*",
       "https://funtouch.app/*",
-      "https://*.funtouch.app/*"
+      "https://*.funtouch.app/*",
+      "https://funtouch.vercel.app/*",
+      "https://*.vercel.app/*"
     ]
   }
 }

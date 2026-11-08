@@ -8,6 +8,7 @@ interface LandingPageProps {
   onJoinCall: (roomId: string, guestName: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  initialRoomId?: string;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -15,12 +16,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onJoinCall,
   loading,
   error,
+  initialRoomId,
 }) => {
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [mode, setMode] = useState<'create' | 'join'>(initialRoomId ? 'join' : 'create');
   const [hostName, setHostName] = useState('');
   const [roomName, setRoomName] = useState('');
   const [guestName, setGuestName] = useState('');
-  const [roomId, setRoomId] = useState('');
+  const [roomId, setRoomId] = useState(initialRoomId || '');
+
+  React.useEffect(() => {
+    if (initialRoomId) {
+      setRoomId(initialRoomId);
+      setMode('join');
+    }
+  }, [initialRoomId]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

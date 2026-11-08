@@ -37,7 +37,7 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
           </p>
           <div className="flex items-center justify-center space-x-2 text-orange-400 text-sm font-medium mb-6">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Connecting to room lobby...</span>
+            <span>Waiting for host to admit you...</span>
           </div>
           <button
             onClick={onCancelJoin}

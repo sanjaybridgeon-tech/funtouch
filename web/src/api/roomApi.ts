@@ -25,6 +25,18 @@ export const removeHostToken = (roomId: string): void => {
   sessionStorage.removeItem(`funtouch_host_token_${roomId}`);
 };
 
+export const getLiveKitToken = (roomId: string): string | null => {
+  return sessionStorage.getItem(`funtouch_livekit_token_${roomId}`);
+};
+
+export const setLiveKitTokenStorage = (roomId: string, token: string): void => {
+  sessionStorage.setItem(`funtouch_livekit_token_${roomId}`, token);
+};
+
+export const removeLiveKitTokenStorage = (roomId: string): void => {
+  sessionStorage.removeItem(`funtouch_livekit_token_${roomId}`);
+};
+
 export const roomApi = {
   // 1. Create Room (POST /api/rooms)
   async createRoom(request: CreateRoomRequest): Promise<{ room: RoomResponse; hostToken: string }> {
@@ -44,6 +56,9 @@ export const roomApi = {
 
     if (hostToken) {
       setHostToken(room.roomId, hostToken);
+    }
+    if (room.token) {
+      setLiveKitTokenStorage(room.roomId, room.token);
     }
 
     return { room, hostToken };
@@ -149,6 +164,7 @@ export const roomApi = {
     }
 
     removeHostToken(roomId);
+    removeLiveKitTokenStorage(roomId);
     return res.json();
   },
 };
