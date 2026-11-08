@@ -34,6 +34,9 @@ public class CorsConfig {
         patterns.add("http://127.0.0.1:*");
         patterns.add("https://*.funtouch.app");
         patterns.add("https://funtouch.app");
+        patterns.add("https://*.vercel.app");
+        patterns.add("https://*.netlify.app");
+        patterns.add("https://*.onrender.com");
 
         if (corsProperties.allowedOrigins() != null) {
             patterns.addAll(corsProperties.allowedOrigins());

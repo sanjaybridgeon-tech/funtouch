@@ -9,7 +9,8 @@ import {
   ControlResponse,
 } from '../types';
 
-const API_BASE = '/api/rooms';
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+const API_BASE = `${BACKEND_URL}/api/rooms`;
 
 // Helper to get stored host token for a room
 export const getHostToken = (roomId: string): string | null => {

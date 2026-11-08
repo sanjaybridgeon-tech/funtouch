@@ -17,8 +17,11 @@ export class RoomWebSocketClient {
     if (this.client && this.connected) return;
 
     // Use SockJS factory for reliable websocket connection with fallback
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+    const wsEndpoint = `${backendUrl}/ws`;
+
     this.client = new Client({
-      webSocketFactory: () => new SockJS('/ws'),
+      webSocketFactory: () => new SockJS(wsEndpoint),
       debug: (str) => {
         if (import.meta.env.DEV) {
           console.debug('[STOMP]', str);

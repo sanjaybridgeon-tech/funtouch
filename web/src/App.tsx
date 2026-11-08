@@ -17,7 +17,7 @@ import { AnimatedBackground } from './components/AnimatedBackground';
 import logo from './assets/logo.png';
 
 // Fallback LiveKit URL if not provided by env
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://funtouch-test.livekit.cloud';
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://funtouch-jo1t2dh2.livekit.cloud';
 
 export function App() {
   const [currentRoom, setCurrentRoom] = useState<RoomResponse | null>(null);

@@ -7,9 +7,9 @@ server:
 
 # LiveKit Cloud credentials — always set via environment variables, never hardcode
 livekit:
-  api-key: ${LIVEKIT_API_KEY:change-me-in-env}
-  api-secret: ${LIVEKIT_API_SECRET:change-me-in-env}
-  url: ${LIVEKIT_URL:wss://your-project.livekit.cloud}
+  api-key: ${LIVEKIT_API_KEY:APIP35RN5TGbbwr}
+  api-secret: ${LIVEKIT_API_SECRET:cdZTPBvxqzBxzFvyHQ9vHpNBcMVuBWo3v6UaOMrBhyP}
+  url: ${LIVEKIT_URL:wss://funtouch-jo1t2dh2.livekit.cloud}
 
 # Allowed frontend origins for CORS
 funtouch:
