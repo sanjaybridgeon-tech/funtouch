@@ -47,7 +47,7 @@ class LiveKitTokenServiceTest {
     }
 
     @Test
-    @DisplayName("generateGuestToken without control produces subscriber-only token")
+    @DisplayName("generateGuestToken produces token with canPublish and canSubscribe for 2-way call")
     void generateGuestToken_withoutControl() {
         String token = tokenService.generateGuestToken("test-room", "guest-bob", false);
 
@@ -60,9 +60,9 @@ class LiveKitTokenServiceTest {
         assertThat(videoGrant).isNotNull();
         assertThat(videoGrant.get("room")).isEqualTo("test-room");
         assertThat(videoGrant.get("roomJoin")).isEqualTo(true);
-        assertThat(videoGrant.get("canPublish")).isEqualTo(false);
+        assertThat(videoGrant.get("canPublish")).isEqualTo(true);
         assertThat(videoGrant.get("canSubscribe")).isEqualTo(true);
-        assertThat(videoGrant.get("canPublishData")).isEqualTo(false);
+        assertThat(videoGrant.get("canPublishData")).isEqualTo(true);
     }
 
     @Test

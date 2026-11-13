@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.funtouch.service.RoomServiceTest
+-------------------------------------------------------------------------------
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.051 s -- in com.funtouch.service.RoomServiceTest

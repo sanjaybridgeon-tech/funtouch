@@ -327,8 +327,8 @@ export function App() {
       serverUrl={LIVEKIT_URL}
       token={liveKitToken}
       connect={true}
-      audio={!isMuted}
-      video={!isVideoOff}
+      audio={true}
+      video={true}
       className="min-h-screen bg-[#060913] flex flex-col justify-between overflow-hidden relative"
     >
       {/* Dynamic Animated Ambient Background with Logo Colors */}
@@ -361,6 +361,7 @@ export function App() {
         <VideoStage
           isHost={isHost}
           controlState={controlState}
+          onSetControlState={setControlState}
           roomId={currentRoom.roomId}
         />
       </main>
@@ -369,7 +370,6 @@ export function App() {
       <ControlBar
         isHost={isHost}
         controlState={controlState}
-        guestCount={currentRoom.guests.length}
         roomId={currentRoom.roomId}
         onToggleControl={isHost ? handleToggleControl : undefined}
         onEndCall={handleLeaveCall}

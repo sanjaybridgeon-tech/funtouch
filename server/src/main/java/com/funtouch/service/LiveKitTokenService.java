@@ -54,6 +54,9 @@ public class LiveKitTokenService implements TokenService {
     /**
      * Generate a LiveKit JWT for a guest.
      *
+     * <p>Both host and guest can publish audio/video so they can see and talk to each other.
+     * canPublishData allows guest to send interaction requests, cursor positions, and touch events.
+     *
      * @param roomId     the LiveKit room name
      * @param guestName  the guest's display identity in LiveKit
      * @param canControl if true, the guest can send LiveKit data messages (remote control)
@@ -66,9 +69,9 @@ public class LiveKitTokenService implements TokenService {
         return buildToken(guestName, roomId,
                 new RoomJoin(true),
                 new RoomName(roomId),
-                new CanPublish(false),
+                new CanPublish(true),
                 new CanSubscribe(true),
-                new CanPublishData(canControl)
+                new CanPublishData(true)
         );
     }
 

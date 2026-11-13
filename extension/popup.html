@@ -10,7 +10,7 @@
       padding: 0;
     }
     body {
-      width: 320px;
+      width: 340px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #090D16;
       color: #F8FAFC;
@@ -79,10 +79,34 @@
     }
     .tab-info {
       font-size: 11px;
-      color: #64748B;
+      color: #38BDF8;
+      font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-top: 4px;
+    }
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748B;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .tab-select {
+      width: 100%;
+      padding: 8px 10px;
+      background: #0B1120;
+      border: 1px solid #1E293B;
+      border-radius: 8px;
+      color: #F8FAFC;
+      font-size: 12px;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    .tab-select:focus {
+      border-color: #FF7A00;
     }
     .actions {
       display: flex;
@@ -111,6 +135,15 @@
     .btn-primary:hover {
       background: linear-gradient(90deg, #E66E00, #E68500);
     }
+    .btn-secondary {
+      background: #1E293B;
+      color: #CBD5E1;
+      border: 1px solid #334155;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #FFFFFF;
+    }
     .btn-danger {
       background: #DC2626;
       color: #FFFFFF;
@@ -118,12 +151,13 @@
     .btn-danger:hover {
       background: #B91C1C;
     }
-    .instructions {
+    .tip-box {
       margin-top: 14px;
       font-size: 11px;
-      color: #64748B;
+      color: #94A3B8;
       line-height: 1.4;
       background: #0B1120;
+      border: 1px solid #1E293B;
       padding: 10px;
       border-radius: 8px;
     }
@@ -146,23 +180,28 @@
     <div id="tab-title" class="tab-info">No tab currently linked</div>
   </div>
 
+  <div class="section-title">Select Tab to Control</div>
+  <select id="tab-select" class="tab-select">
+    <option value="">Loading open tabs...</option>
+  </select>
+
   <div class="actions">
     <button id="set-target-btn" class="btn-primary">
-      <span>🎯 Set Current Tab as Controlled Tab</span>
+      <span>🎯 Link Selected Tab</span>
+    </button>
+    <button id="set-current-btn" class="btn-secondary">
+      <span>📌 Link Current Active Tab</span>
     </button>
     <button id="stop-control-btn" class="btn-danger" style="display: none;">
       <span>🛑 Stop Remote Control (Esc)</span>
     </button>
   </div>
 
-  <div class="instructions">
-    💡 <strong>How it works:</strong><br>
-    1. Navigate to the tab you want to share (e.g. YouTube).<br>
-    2. Click <em>"Set Current Tab as Controlled Tab"</em>.<br>
-    3. In FunTouch, click <strong>Allow Control</strong>.
+  <div class="tip-box">
+    ⚡ <strong>Background Active:</strong><br>
+    Once linked, you can safely close this popup. The extension stays linked in the background while you are in your call.
   </div>
 
   <script src="popup.js"></script>
 </body>
 </html>
-

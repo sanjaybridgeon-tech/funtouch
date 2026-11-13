@@ -1,4 +1,4 @@
-export type InteractionMessageType = 'cursor' | 'click' | 'scroll';
+export type InteractionMessageType = 'cursor' | 'click' | 'scroll' | 'request_control' | 'control_state';
 
 export interface RemoteCursorEvent {
   type: 'cursor';
@@ -31,7 +31,26 @@ export interface RemoteScrollEvent {
   timestamp: number;
 }
 
-export type InteractionMessage = RemoteCursorEvent | RemoteClickEvent | RemoteScrollEvent;
+export interface RequestControlEvent {
+  type: 'request_control';
+  guestId: string;
+  guestName: string;
+  timestamp: number;
+}
+
+export interface ControlStateEvent {
+  type: 'control_state';
+  action: 'grant' | 'revoke';
+  guestId?: string;
+  timestamp: number;
+}
+
+export type InteractionMessage =
+  | RemoteCursorEvent
+  | RemoteClickEvent
+  | RemoteScrollEvent
+  | RequestControlEvent
+  | ControlStateEvent;
 
 export interface ClickRipple {
   id: string;
@@ -39,4 +58,3 @@ export interface ClickRipple {
   y: number;
   color: string;
 }
-

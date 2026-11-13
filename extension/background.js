@@ -6,6 +6,14 @@ let isControlActive = false;
 
 console.log('[FunTouch Service Worker] Loaded.');
 
+// Restore persisted tab on startup
+chrome.storage.local.get(['controlledTabId'], (result) => {
+  if (result.controlledTabId) {
+    controlledTabId = result.controlledTabId;
+    console.log('[FunTouch SW] Restored controlledTabId:', controlledTabId);
+  }
+});
+
 // ── Badge Helpers ────────────────────────────────────────────────────────
 
 function updateBadge(active) {
@@ -22,7 +30,6 @@ function updateBadge(active) {
 
 async function ensureContentScriptInjected(tabId) {
   try {
-    // Ping tab to check if content script is already alive
     const response = await chrome.tabs.sendMessage(tabId, { type: 'PING' }).catch(() => null);
     if (!response) {
       await chrome.scripting.executeScript({
@@ -36,126 +43,142 @@ async function ensureContentScriptInjected(tabId) {
   }
 }
 
-// ── External Messages from FunTouch Web App ──────────────────────────────
+function isFunTouchUrl(url) {
+  if (!url) return false;
+  return (
+    url.includes('localhost:') ||
+    url.includes('127.0.0.1:') ||
+    url.includes('funtouch.app') ||
+    url.includes('vercel.app')
+  );
+}
 
-chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-  console.log('[FunTouch SW] Received external message from:', sender.url, request);
+// ── Unified Message Dispatcher ──────────────────────────────────────────
 
-  const handleMessage = async () => {
-    switch (request.type) {
-      case 'PING':
-        return {
-          pong: true,
-          version: '1.0.0',
-          isControlActive,
-          controlledTabId,
-        };
+async function handleMessage(request) {
+  switch (request.type) {
+    case 'PING':
+      return {
+        pong: true,
+        version: '1.0.0',
+        isControlActive,
+        controlledTabId,
+      };
 
-      case 'SELECT_TARGET_TAB': {
-        // Find most recent active tab in another window, or query tabs
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: false });
-        if (tabs.length > 0 && tabs[0].id) {
-          controlledTabId = tabs[0].id;
-          return { success: true, tabId: controlledTabId, title: tabs[0].title };
-        }
-        return { success: false, message: 'No other active tab found' };
+    case 'GET_STATUS':
+      return {
+        isControlActive,
+        controlledTabId,
+      };
+
+    case 'MANUAL_SET_TAB':
+      controlledTabId = request.tabId;
+      chrome.storage.local.set({ controlledTabId: request.tabId });
+      console.log('[FunTouch] Manually set controlled tab to:', controlledTabId);
+      return { success: true, tabId: controlledTabId };
+
+    case 'STOP_CONTROL_CONFIRMED':
+      updateBadge(false);
+      console.log('[FunTouch] Remote control stopped via host Escape key or popup.');
+      return { success: true };
+
+    case 'SELECT_TARGET_TAB': {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: false });
+      if (tabs.length > 0 && tabs[0].id) {
+        controlledTabId = tabs[0].id;
+        chrome.storage.local.set({ controlledTabId });
+        return { success: true, tabId: controlledTabId, title: tabs[0].title };
       }
-
-      case 'START_CONTROL': {
-        const targetTabId = request.tabId || controlledTabId;
-        if (!targetTabId) {
-          // If no tab explicitly chosen, pick the most recent active non-FunTouch tab
-          const allTabs = await chrome.tabs.query({});
-          const candidate = allTabs.find(
-            (t) => t.id && !t.url?.includes('localhost:5173') && !t.url?.includes('funtouch.app')
-          );
-          if (candidate && candidate.id) {
-            controlledTabId = candidate.id;
-          }
-        } else {
-          controlledTabId = targetTabId;
-        }
-
-        if (!controlledTabId) {
-          return { success: false, error: 'No shared tab selected to control' };
-        }
-
-        await ensureContentScriptInjected(controlledTabId);
-        await chrome.tabs.sendMessage(controlledTabId, {
-          type: 'START_CONTROL',
-          guestName: request.guestName || 'Guest',
-        }).catch((err) => console.warn('[FunTouch] start_control message failed:', err));
-
-        updateBadge(true);
-        return { success: true, controlledTabId };
-      }
-
-      case 'STOP_CONTROL': {
-        if (controlledTabId) {
-          await chrome.tabs.sendMessage(controlledTabId, { type: 'STOP_CONTROL' }).catch(() => {});
-        }
-        updateBadge(false);
-        return { success: true };
-      }
-
-      case 'EXECUTE_INTERACTION': {
-        if (!isControlActive || !controlledTabId) {
-          return { success: false, error: 'Remote control is not active' };
-        }
-
-        const { detail } = request;
-        if (!detail) return { success: false, error: 'Missing interaction detail' };
-
-        if (detail.type === 'click') {
-          chrome.tabs.sendMessage(controlledTabId, {
-            type: 'EXECUTE_CLICK',
-            x: detail.x,
-            y: detail.y,
-            button: detail.button || 'left',
-          }).catch(() => {});
-        } else if (detail.type === 'scroll') {
-          chrome.tabs.sendMessage(controlledTabId, {
-            type: 'EXECUTE_SCROLL',
-            x: detail.x,
-            y: detail.y,
-            deltaX: detail.deltaX || 0,
-            deltaY: detail.deltaY || 0,
-          }).catch(() => {});
-        } else if (detail.type === 'type') {
-          chrome.tabs.sendMessage(controlledTabId, {
-            type: 'EXECUTE_TYPE',
-            text: detail.text || '',
-          }).catch(() => {});
-        }
-
-        return { success: true };
-      }
-
-      default:
-        return { error: 'Unknown request type' };
+      return { success: false, message: 'No other active tab found' };
     }
-  };
 
-  handleMessage().then(sendResponse);
+    case 'START_CONTROL': {
+      let targetTabId = request.tabId || controlledTabId;
+
+      if (!targetTabId) {
+        const allTabs = await chrome.tabs.query({});
+        const candidate = allTabs.find((t) => t.id && !isFunTouchUrl(t.url));
+        if (candidate && candidate.id) {
+          targetTabId = candidate.id;
+          controlledTabId = targetTabId;
+          chrome.storage.local.set({ controlledTabId });
+        }
+      } else {
+        controlledTabId = targetTabId;
+      }
+
+      if (!controlledTabId) {
+        console.warn('[FunTouch] No target tab found to control');
+        return { success: false, error: 'No shared tab selected to control' };
+      }
+
+      console.log(`[FunTouch] Starting remote control on tab ${controlledTabId}`);
+      await ensureContentScriptInjected(controlledTabId);
+      await chrome.tabs.sendMessage(controlledTabId, {
+        type: 'START_CONTROL',
+        guestName: request.guestName || 'Guest',
+      }).catch((err) => console.warn('[FunTouch] start_control message failed:', err));
+
+      updateBadge(true);
+      return { success: true, controlledTabId };
+    }
+
+    case 'STOP_CONTROL': {
+      if (controlledTabId) {
+        await chrome.tabs.sendMessage(controlledTabId, { type: 'STOP_CONTROL' }).catch(() => {});
+      }
+      updateBadge(false);
+      return { success: true };
+    }
+
+    case 'EXECUTE_INTERACTION': {
+      if (!isControlActive || !controlledTabId) {
+        return { success: false, error: 'Remote control is not active' };
+      }
+
+      const { detail } = request;
+      if (!detail) return { success: false, error: 'Missing interaction detail' };
+
+      console.log(`[FunTouch SW] Relaying ${detail.type} to tab ${controlledTabId}:`, detail);
+
+      if (detail.type === 'click') {
+        chrome.tabs.sendMessage(controlledTabId, {
+          type: 'EXECUTE_CLICK',
+          x: detail.x,
+          y: detail.y,
+          button: detail.button || 'left',
+        }).catch((err) => console.warn('[FunTouch SW] Click delivery error:', err));
+      } else if (detail.type === 'scroll') {
+        chrome.tabs.sendMessage(controlledTabId, {
+          type: 'EXECUTE_SCROLL',
+          x: detail.x,
+          y: detail.y,
+          deltaX: detail.deltaX || 0,
+          deltaY: detail.deltaY || 0,
+        }).catch((err) => console.warn('[FunTouch SW] Scroll delivery error:', err));
+      } else if (detail.type === 'type') {
+        chrome.tabs.sendMessage(controlledTabId, {
+          type: 'EXECUTE_TYPE',
+          text: detail.text || '',
+        }).catch((err) => console.warn('[FunTouch SW] Type delivery error:', err));
+      }
+
+      return { success: true };
+    }
+
+    default:
+      return { error: 'Unknown request type: ' + request.type };
+  }
+}
+
+// ── Listen for messages from Content Scripts (host-bridge.js) & Popup ────
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  handleMessage(request).then(sendResponse);
   return true; // Keep channel open for async response
 });
 
-// ── Internal Messages from Content Script / Popup ────────────────────────
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'STOP_CONTROL_CONFIRMED') {
-    updateBadge(false);
-    console.log('[FunTouch] Remote control stopped via host Escape key or popup.');
-    sendResponse({ success: true });
-  } else if (message.type === 'GET_STATUS') {
-    sendResponse({
-      isControlActive,
-      controlledTabId,
-    });
-  } else if (message.type === 'MANUAL_SET_TAB') {
-    controlledTabId = message.tabId;
-    sendResponse({ success: true, tabId: controlledTabId });
-  }
-  return true;
+// ── Listen for messages from External Web Pages ─────────────────────────
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  handleMessage(request).then(sendResponse);
+  return true; // Keep channel open for async response
 });
-
